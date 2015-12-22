@@ -18,10 +18,10 @@ def run(**kwargs):
     if action_name == "clean":
         clean_project(dest_path)
     elif action_name == "build":
-        build_project(dest_path)
+        build_project(dest_path, project_name, stage)
     elif action_name == "rebuild":
         clean_project(dest_path)
-        build_project(dest_path)
+        build_project(dest_path, project_name, stage)
 
 def prepare_path(full_path):
     path_parts = full_path.split(os.sep)
@@ -42,6 +42,10 @@ def assemble_dest_path(project_name, stage):
 
 def assemble_makefile_name(dest_path):
     return "%s%sMakefile" % (dest_path, os.sep)
+
+def assemble_lib_path(project_name, stage):
+    script_path = os.getcwd()
+    return "%s/build/%s/lib/" % (script_path, stage)
 
 def refresh_makefile(project_name, stage, dest_path):
     """ create Makefile for project's stage in destination path
@@ -72,10 +76,23 @@ def clean_project(dest_path):
     os.system(cmd)
     print "Project cleaned"
 
-def build_project(dest_path):
+def build_project(dest_path, project_name, stage):
     cmd = "make -C %s" % dest_path
 
     print "Building project in %s" % dest_path
     os.system(cmd)
     print "Building finished"
+
+    print "Linking library to the local library storage"
+
+    # target destination
+    lib_path = assemble_lib_path(project_name, stage)
+
+    # source files
+    lib_sources = "%s/lib%s.so*" % (dest_path, project_name)
+    prepare_path(lib_path)
+    cmd = "ln -s %s %s" % (lib_sources, lib_path)
+    os.system(cmd)
+    print "Linking finished"
+
 
