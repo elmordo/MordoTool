@@ -54,6 +54,7 @@ def refresh_makefile(project_name, stage, dest_path):
     make_file = assemble_makefile_name(dest_path)
 
     additional_args = []
+    make_stage = stage
 
     # add additional commands
     if stage in ("debug", "test"):
@@ -61,10 +62,11 @@ def refresh_makefile(project_name, stage, dest_path):
 
         if stage == "test":
             additional_args.append("CONFIG+=TEST")
+            make_stage="debug"
 
     # assemble command
     joined_arguments = " ".join(additional_args)
-    cmd = "qmake %s %s STAGE=%s -o %s" % (project_name, joined_arguments, stage, make_file)
+    cmd = "qmake %s %s STAGE=%s -o %s" % (project_name, joined_arguments, make_stage, make_file)
 
     print "Start generating Makefile for %s (%s) to %s" % (project_name, stage, dest_path)
     os.system(cmd)
