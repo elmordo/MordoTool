@@ -3,9 +3,43 @@
 import sys
 import os
 
+
+class SymLinkError(Exception):
+    """ raised when symlink can not be created
+
+    """
+
+
 def run(**kwargs):
-    project_name = kwargs["project"]
+    # get projects to build
+    print kwargs
+
+    if kwargs["project"] == "all":
+        # all project will be done
+        projects = discover_projects(os.getcwd())
+    else:
+        projects = [ kwargs["project"] ]
+
     stage = kwargs["stage"]
+    action = kwargs["action"]
+    messages = list()
+
+    for project in projects:
+        try:
+            apply_on_project(project, stage, action)
+        except SymLinkError as error:
+            messages.append(error.message)
+
+    # print messages
+    if messages:
+        print ""
+        print "Some messages was generated:"
+        print "----------------------------"
+        for msg in messages:
+            print msg
+
+
+def apply_on_project(project_name, stage, action_name):
     dest_path = assemble_dest_path(project_name, stage)
 
     # prepare destination and refresh make file
@@ -13,7 +47,6 @@ def run(**kwargs):
     refresh_makefile(project_name, stage, dest_path)
     
     # resolve action
-    action_name = kwargs["action"]
 
     if action_name == "clean":
         clean_project(dest_path)
@@ -90,6 +123,13 @@ def build_project(dest_path, project_name, stage):
     # target destination
     lib_path = assemble_lib_path(project_name, stage)
 
+    # test for library file
+    lib_name = "%s/lib%s.so" % (dest_path, project_name)
+
+    if not os.path.isfile(lib_name):
+        print "Library %s link failed" % project_name
+        raise SymLinkError("Library %s was not created" % project_name)
+
     # source files
     lib_sources = "%s/lib%s.so*" % (dest_path, project_name)
     prepare_path(lib_path)
@@ -98,3 +138,25 @@ def build_project(dest_path, project_name, stage):
     print "Linking finished"
 
 
+def discover_projects(path):
+    """ return names of all directory where *.pro file is found
+
+    Args:
+        path (str): base path
+
+    Returns:
+        list: set of all projects
+    """
+    dirs = os.listdir(path)
+    projects = list()
+
+    for entry in dirs:
+        if os.path.isdir(entry):
+            # test for git respository
+            pro_path = "%s%s%s%s/%s.pro" % (path, os.sep, entry, os.sep, entry)
+
+            print pro_path
+            if os.path.isfile(pro_path):
+                projects.append(entry)
+
+    return projects
